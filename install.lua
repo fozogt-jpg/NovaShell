@@ -1,16 +1,16 @@
 -- Auto-generated Nova installer
 local root = "https://fozogt-jpg.github.io/NovaShell/os"
 local files = {
-  { url = root.."/bootscreen.lua", path = "/bootscreen.lua" },
-  { url = root.."/editstartupoptions.lua", path = "/editstartupoptions.lua" },
-  { url = root.."/nova.lua", path = "/nova.lua" },
-  { url = root.."/reboot1.lua", path = "/reboot1.lua" },
-  { url = root.."/shutdown1.lua", path = "/shutdown1.lua" },
-  { url = root.."/startup.lua", path = "/startup.lua" },
-  { url = root.."/startupoptions.txt", path = "/startupoptions.txt" },
-  { url = root.."/Nova/core.lua", path = "/nova/core.lua" },
-  { url = root.."/Nova/install.lua", path = "/nova/install.lua" },
-  { url = root.."/Nova/uninstall.lua", path = "/nova/uninstall.lua" },
+  { url = root.."/startup/bootmenu/bootscreen.lua", path = "/nova/sys/boot/menu/bootscreen.lua" },
+  { url = root.."/startup/bootmenu/editstartupoptions.lua", path = "/nova/sys/boot/menu/editstartupoptions.lua" },
+  { url = root.."/startup/nova.lua", path = "/nova/sys/boot/nova.lua" },
+  { url = root.."/startup/bootmenu/reboot1.lua", path = "/nova/sys/boot/menu/reboot1.lua" },
+  { url = root.."/startup/bootmenu/shutdown1.lua", path = "/nova/sys/boot/menu/shutdown1.lua" },
+  { url = root.."/startup/startup.lua", path = "/startup.lua" },
+  { url = root.."/startupoptions.txt", path = "/nova/sys/boot/menu/startupoptions.txt" },
+  { url = root.."/Nova/sys/core.lua", path = "/nova/sys/core.lua" },
+  { url = root.."/Nova/sys/pkg-utils/install.lua", path = "/nova/pkg-utils/install.lua" },
+  { url = root.."/Nova/sys/pkg-utils/uninstall.lua", path = "/nova/sys/pkg-utils/uninstall.lua" },
   { url = root.."/Nova/default_packages/appstore.lua", path = "/nova/packages/NovaStore.lua" },
 }
 

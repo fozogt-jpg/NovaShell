@@ -1,0 +1,5 @@
+term.clear()
+term.setCursorPos(1,1)
+print("Starting Nova Shell")
+sleep(1)
+shell.run("/nova/sys/core.lua")

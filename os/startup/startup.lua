@@ -1,0 +1,5 @@
+shell.run("clear")
+print("Nova Bootmenu")
+print("Using BootR https://forums.computercraft.cc/index.php?topic=727.0")
+sleep(1.5)
+shell.run("bootscreen.lua")
