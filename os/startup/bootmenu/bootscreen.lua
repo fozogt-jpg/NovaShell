@@ -24,8 +24,8 @@ local term      = _G.term
 local textutils = _G.textutils
 
 local function loadBootOptions()
-	if not fs.exists('startupoptions.txt') then
-		local f = fs.open('startupoptions.txt', 'w')
+	if not fs.exists('nova/sys/boot/menu/startupoptions.txt') then
+		local f = fs.open('nova/sys/boot/menu/startupoptions.txt', 'w')
 --btw, this boot menu down here only appears if you are missing the startup options file, so if you see this menu, either you're
 --cooked, or you aren't on the latest version, 4.0
 		f.write(textutils.serialize({
@@ -42,7 +42,7 @@ local function loadBootOptions()
 		f.close()
 	end
 
-	local f = fs.open('startupoptions.txt', 'r')
+	local f = fs.open('nova/sys/boot/menu/startupoptions.txt', 'r')
 	local options = textutils.unserialize(f.readAll())
 	f.close()
 
@@ -55,7 +55,7 @@ local function loadBootOptions()
 		end
 	end
 	if changed then 
-		local f = fs.open("startupoptions.txt", "w")
+		local f = fs.open("nova/sys/boot/menu/startupoptions.txt", "w")
 		f.write(textutils.serialize(options))
 		f.close()
 	end
