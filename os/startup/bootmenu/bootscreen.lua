@@ -1,190 +1,258 @@
---[[ Based on the Opus OS bootloader!
--- if it means anything, I'm glad you're here. :)
-    startup.boot
-		delay
-			description:	delays amount before starting the default selection
-			default:		1.5
-   
+-- Nova Bootmenu with "Add Option" persistence
+-- Saves custom entries to /nova/sys/boot/options.txt (format: name <TAB> path per line)
 
-		preload
-			description :	runs before menu is displayed, can be used for password
-							locking, drive encryption, etc.
-			example :		{ [1] = '/bootscreen.lua', [2] = 'path2/another.lua' }
+local optionsFile = "/nova/sys/boot/options.txt"
+local baseOptions = {
+    { name = "Nova", path = "/nova/sys/boot/nova.lua" },
+    { name = "CraftOS", special = "craftos" },
+    { name = "Shutdown", path = "/nova/sys/boot/menu/shutdown1.lua" },
+    { name = "Reboot", path = "/nova/sys/boot/menu/reboot1.lua" },
+    { name = "Add Option", special = "add" } -- Add Option is part of base options
+}
 
-		menu
-			description:	array of menu entries (see .startup.boot for examples)
-]]
+local timeout = 7
+local defaultIndex = 1
+local countdownActive = true -- stops when user moves
 
-local colors    = _G.colors
-local fs        = _G.fs
-local keys      = _G.keys
-local os        = _G.os
-local settings  = _G.settings
-local term      = _G.term
-local textutils = _G.textutils
-
-local function loadBootOptions()
-	if not fs.exists('nova/sys/boot/menu/startupoptions.txt') then
-		local f = fs.open('nova/sys/boot/menu/startupoptions.txt', 'w')
---btw, this boot menu down here only appears if you are missing the startup options file, so if you see this menu, either you're
---cooked, or you aren't on the latest version, 4.0
-		f.write(textutils.serialize({
-			delay = 1.5,
-			preload = { },
-            menu = {
-				{ prompt = os.version() },
-				{ prompt = 'Edit Boot Options'         , args = { '/editstartupoptions.lua' } },
-                { prompt = 'Reboot'         , args = { '/reboot1.lua' } },
-                { prompt = 'Shutdown'         , args = { '/shutdown1.lua' } },
-				{ prompt = 'Nova Desktop'         , args = { '/nova.lua' } },
-			},
-		}))
-		f.close()
-	end
-
-	local f = fs.open('nova/sys/boot/menu/startupoptions.txt', 'r')
-	local options = textutils.unserialize(f.readAll())
-	f.close()
-
-	-- Backwards compatibility for .startup.boot files created before sys/boot files' extensions were changed
-	local changed = false
-	for _, item in pairs(options.menu) do
-		if item.args and item.args[1]:match("/?sys/boot/%l+%.boot") then
-			item.args[1] = item.args[1]:gsub("%.boot", "%.lua")
-			changed = true
-		end
-	end
-	if changed then 
-		local f = fs.open("nova/sys/boot/menu/startupoptions.txt", "w")
-		f.write(textutils.serialize(options))
-		f.close()
-	end
-
-	return options
+-- Helpers for filesystem read/write
+local function ensureDirForFile(path)
+    -- create directories up to the file's parent folder
+    local parent = path:match("(.*/)")
+    if parent and not fs.exists(parent) then
+        fs.makeDir(parent)
+    end
 end
 
-local bootOptions = loadBootOptions()
-
-local bootOption = 2
-if settings then
-	settings.load('.settings')
-	bootOption = tonumber(settings.get('opus.boot_option')) or bootOption
+local function load_custom_options()
+    local customs = {}
+    if fs.exists(optionsFile) then
+        local fh = fs.open(optionsFile, "r")
+        if fh then
+            while true do
+                local line = fh.readLine()
+                if not line then break end
+                -- Expecting: name<TAB>path
+                local name, path = line:match("([^\t]+)\t(.+)")
+                if name and path then
+                    table.insert(customs, { name = name, path = path })
+                end
+            end
+            fh.close()
+        end
+    end
+    return customs
 end
 
-local function startupMenu()
-	local x, y = term.getSize()
-	local align, selected = 0, bootOption
-
-	local function redraw()
-		local title = "Boot Options:"
-		term.clear()
-		term.setTextColor(colors.white)
-		term.setCursorPos((x/2)-(#title/2), (y/2)-(#bootOptions.menu/2)-1)
-		term.write(title)
-		for i, item in pairs(bootOptions.menu) do
-			local txt = i .. ". " .. item.prompt
-			term.setCursorPos((x/2)-(align/2), (y/2)-(#bootOptions.menu/2)+i)
-			term.write(txt)
-		end
-	end
-
-	for _, item in pairs(bootOptions.menu) do
-		if #item.prompt > align then
-			align = #item.prompt
-		end
-	end
-
-	redraw()
-	while true do
-		term.setCursorPos((x/2)-(align/2)-2, (y/2)-(#bootOptions.menu/2)+selected)
-		term.setTextColor(term.isColor() and colors.yellow or colors.lightGray)
-
-		term.write(">")
-		local event, key = os.pullEvent()
-		if event == "mouse_scroll" then
-			key = key == 1 and keys.down or keys.up
-		elseif event == 'key_up' then
-			key = nil  -- only process key events
-		end
-
-		if key == keys.enter or key == keys.right then
-			return selected
-		elseif key == keys.down then
-			if selected == #bootOptions.menu then
-				selected = 0
-			end
-			selected = selected + 1
-		elseif key == keys.up then
-			if selected == 1 then
-				selected = #bootOptions.menu + 1
-			end
-			selected = selected - 1
-		elseif event == 'char' then
-			key = tonumber(key) or 0
-			if bootOptions.menu[key] then
-				return key
-			end
-		end
-
-		local cx, cy = term.getCursorPos()
-		term.setCursorPos(cx-1, cy)
-		term.write(" ")
-	end
+local function save_custom_options(customs)
+    ensureDirForFile(optionsFile)
+    local fh = fs.open(optionsFile, "w")
+    if not fh then
+        print("Error: cannot open " .. optionsFile .. " for writing.")
+        sleep(2)
+        return false
+    end
+    for _, opt in ipairs(customs) do
+        -- write as name<TAB>path
+        fh.writeLine(opt.name .. "\t" .. opt.path)
+    end
+    fh.close()
+    return true
 end
 
-local function splash()
-	local w, h = term.current().getSize()
+local customOptions = load_custom_options()
 
-	term.setTextColor(colors.white)
-	if not term.isColor() then
-		local str = 'Opus OS'
-		term.setCursorPos((w - #str) / 2, h / 2)
-		term.write(str)
-	else
-		term.setBackgroundColor(colors.black)
-		term.clear()
-		local opus = {
-			"fff"
-		}
-		for k,line in ipairs(opus) do
-			term.setCursorPos((w - 18) / 2, k + (h - #opus) / 2)
-			term.blit(string.rep(' ', #line), string.rep('a', #line), line)
-		end
-	end
-
-	local str = 'Press any key for boot menu'
-	term.setCursorPos((w - #str) / 2, h)
-	term.write(str)
+local function build_options()
+    -- Combine baseOptions and customOptions (insert customs before Shutdown/Reboot if desired)
+    -- Simpler: keep baseOptions order and append customs before the "Shutdown" and "Reboot"
+    local opts = {}
+    for i, o in ipairs(baseOptions) do
+        -- We'll insert customs right before Shutdown if that exists, else at the end.
+        if o.name == "Shutdown" then
+            -- insert any customs here
+            for _, c in ipairs(customOptions) do
+                table.insert(opts, { name = c.name, path = c.path })
+            end
+        end
+        table.insert(opts, o)
+    end
+    -- If "Shutdown" wasn't present, append customs at the end
+    if not (function()
+        for _, o in ipairs(baseOptions) do if o.name == "Shutdown" then return true end end
+        return false
+    end)() then
+        for _, c in ipairs(customOptions) do
+            table.insert(opts, { name = c.name, path = c.path })
+        end
+    end
+    return opts
 end
 
-for _, v in pairs(bootOptions.preload) do
-	os.run(_ENV, v)
+-- Terminal helpers
+local function clearScreen()
+    term.setBackgroundColor(colors.black)
+    term.setTextColor(colors.white)
+    term.clear()
 end
 
-term.clear()
-splash()
+local function centerText(y, text, textColor)
+    local w, _ = term.getSize()
+    term.setCursorPos(math.floor((w - #text) / 2) + 1, y)
+    term.setTextColor(textColor or colors.white)
+    term.write(text)
+    term.setTextColor(colors.white)
+end
 
-local timerId = os.startTimer(bootOptions.delay)
+local function drawMenu(options, selected, countdown)
+    clearScreen()
+    centerText(2, "Nova Bootmenu", colors.blue)
+    centerText(4, "Use Up/Down to choose, Enter to boot", colors.lightGray)
+
+    for i, opt in ipairs(options) do
+        term.setCursorPos(5, i + 6)
+        term.setBackgroundColor(colors.black)
+        if i == selected then
+            term.setTextColor(colors.purple)
+            write("> " .. opt.name .. " <")
+            term.setTextColor(colors.white)
+        else
+            term.setTextColor(colors.white)
+            write("  " .. opt.name)
+        end
+    end
+
+    term.setCursorPos(1, 15)
+    term.setBackgroundColor(colors.black)
+    term.setTextColor(colors.lightGray)
+    if countdownActive then
+        centerText(15, "Booting default in " .. countdown .. "s")
+    else
+        centerText(15, "Press Enter to boot")
+    end
+    term.setTextColor(colors.white)
+end
+
+local function boot(opt)
+    clearScreen()
+    term.setCursorPos(1,1)
+    if opt.special == "craftos" then
+        print("CraftOS")
+        return
+    elseif opt.special == "add" then
+        -- handled elsewhere; should not reach here for direct boot
+        return
+    elseif opt.path and fs.exists(opt.path) then
+        shell.run(opt.path)
+    else
+        print("Error: " .. (opt.path or "No path") .. " not found!")
+        sleep(2)
+    end
+end
+
+local function prompt_add_option()
+    -- stop timer interaction visually and prompt for name/path
+    clearScreen()
+    term.setCursorPos(1,1)
+    term.setTextColor(colors.white)
+    print("Add Option")
+    print("----------")
+    write("Name: ")
+    local name = read()
+    if not name or name:match("^%s*$") then
+        print("Cancelled: name cannot be empty.")
+        sleep(1.5)
+        return false
+    end
+
+    write("Program Path: ")
+    local path = read()
+    if not path or path:match("^%s*$") then
+        print("Cancelled: path cannot be empty.")
+        sleep(1.5)
+        return false
+    end
+
+    -- Normalize path: if user typed relative, keep as-is. Optionally validate file exists:
+    if not fs.exists(path) then
+        print("Warning: path does not exist right now. Save anyway? (y/n)")
+        local ans = read()
+        if not (ans and (ans:lower():sub(1,1) == "y")) then
+            print("Add cancelled.")
+            sleep(1.2)
+            return false
+        end
+    end
+
+    -- Save to customOptions and write file
+    table.insert(customOptions, { name = name, path = path })
+    local ok = save_custom_options(customOptions)
+    if ok then
+        print("Option added and saved.")
+    else
+        print("Option added (not saved).")
+    end
+    sleep(1.2)
+    return true
+end
+
+-- Main loop
+local selected = defaultIndex
+local countdown = timeout
+local timer = os.startTimer(1)
+
 while true do
-	local e, id = os.pullEvent()
-	if e == 'timer' and id == timerId then
-		break
-	end
-	if e == 'char' or e == 'key' then
-		bootOption = startupMenu()
-		if settings then
-			settings.set('opus.boot_option', bootOption)
-			settings.save('.settings')
-		end
-		break
-	end
+    local options = build_options()
+    drawMenu(options, selected, countdown)
+    local e, p = os.pullEvent()
+    if e == "key" then
+        if p == keys.up then
+            selected = selected - 1
+            if selected < 1 then selected = #options end
+            countdownActive = false
+            drawMenu(options, selected, countdown)
+        elseif p == keys.down then
+            selected = selected + 1
+            if selected > #options then selected = 1 end
+            countdownActive = false
+            drawMenu(options, selected, countdown)
+        elseif p == keys.enter then
+            local opt = options[selected]
+            if opt then
+                if opt.special == "add" then
+                    -- entering Add Option: prompt, save, and return to menu
+                    countdownActive = false
+                    local added = prompt_add_option()
+                    -- if added, keep countdown inactive (user interacted). Keep selected pointing at the new option?
+                    -- rebuild options and set selected to the new custom option index (optional)
+                    options = build_options()
+                    -- find last inserted custom's index and select it so user can boot or further edit
+                    if added then
+                        -- find the position of the custom we just added (search by name)
+                        local lastName = customOptions[#customOptions].name
+                        for i, o in ipairs(options) do
+                            if o.name == lastName and o.path then
+                                selected = i
+                                break
+                            end
+                        end
+                    end
+                    drawMenu(options, selected, countdown)
+                else
+                    boot(opt)
+                    break
+                end
+            end
+        end
+    elseif e == "timer" and p == timer then
+        if countdownActive then
+            countdown = countdown - 1
+            if countdown <= 0 then
+                local optionsNow = build_options()
+                boot(optionsNow[defaultIndex])
+                break
+            else
+                drawMenu(options, selected, countdown)
+            end
+        end
+        timer = os.startTimer(1)
+    end
 end
-
-term.clear()
-term.setCursorPos(1, 1)
-if bootOptions.menu[bootOption].args then
-	os.run(_ENV, table.unpack(bootOptions.menu[bootOption].args))
-else
-	print(bootOptions.menu[bootOption].prompt)
-end
-

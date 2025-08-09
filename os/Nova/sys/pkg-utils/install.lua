@@ -8,7 +8,7 @@ if not name then
 end
 
 -- fetch index
-local INDEX = "https://fozogt-jpg.github.io/NovaShell/packages/pkgs.json"
+local INDEX = "https://jxoj.github.io/CC/Nova/apps/packages.json"
 local res = http.get(INDEX)
 if not res then error("Cannot fetch package index") end
 local index = textutils.unserializeJSON(res.readAll())

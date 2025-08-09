@@ -1,165 +1,216 @@
 
-
-local fs = fs
-local term = term
+local fs, term, shell, textutils = fs, term, shell, textutils
 
 local PACKAGES_DIR = "/nova/packages"
+local COMMANDS_FILE = "/nova/commands.lua"
+local LOG_DIR = "/nova/logs"
+local unpack = table.unpack or unpack
 
--- ensure packages dir exists
-if not fs.exists(PACKAGES_DIR) then
-  fs.makeDir(PACKAGES_DIR)
+-- Ensure directories exist
+if not fs.exists(PACKAGES_DIR) then fs.makeDir(PACKAGES_DIR) end
+if not fs.exists(LOG_DIR) then fs.makeDir(LOG_DIR) end
+
+-- Auto-create default commands.lua if missing
+if not fs.exists(COMMANDS_FILE) then
+  local ok, h = pcall(function() return fs.open(COMMANDS_FILE, "w") end)
+  if ok and h then
+    h.write([[
+-- /nova/commands.lua (auto-created)
+local commands = {}
+
+commands.about = function(args)
+  print("Nova Shell 1.0")
 end
 
+return commands
+]])
+    h.close()
+  end
+end
+
+-- Load commands table safely
+local function loadCommands()
+  local ok, res = pcall(function() return dofile(COMMANDS_FILE) end)
+  if ok and type(res) == "table" then return res end
+  return {}
+end
+
+-- Return list of package names (no .lua)
+local function listPackageNames()
+  local out = {}
+  if not fs.exists(PACKAGES_DIR) then return out end
+  for _,f in ipairs(fs.list(PACKAGES_DIR)) do
+    if f:sub(-4) == ".lua" then table.insert(out, f:sub(1, -5)) end
+  end
+  table.sort(out, function(a,b) return a:lower() < b:lower() end)
+  return out
+end
+
+-- Build candidate list
+local function buildCandidates()
+  local candMap = {}
+  local builtinList = { "help", "list", "exit", "quit", "clear" }
+  for _,b in ipairs(builtinList) do candMap[b:lower()] = b end
+  local commands = loadCommands()
+  for name,fn in pairs(commands) do
+    if type(name) == "string" and type(fn) == "function" then
+      candMap[name:lower()] = name
+    end
+  end
+  for _,pkg in ipairs(listPackageNames()) do
+    candMap[pkg:lower()] = pkg
+  end
+  local candidates = {}
+  for _,v in pairs(candMap) do table.insert(candidates, v) end
+  table.sort(candidates, function(a,b) return a:lower() < b:lower() end)
+  return candidates
+end
+
+-- Completion function
+local function completion(text)
+  local full = tostring(text or "")
+  local prefix = full:match("^%s*(%S*)") or ""
+  local lowPref = prefix:lower()
+  local candidates = buildCandidates()
+  if prefix == "" then return candidates end
+  local matches = {}
+  for _,c in ipairs(candidates) do
+    if c:lower():sub(1, #lowPref) == lowPref then table.insert(matches, c) end
+  end
+  for _,c in ipairs(matches) do
+    if c:lower() == lowPref then return {} end
+  end
+  if #matches == 0 then return {} end
+  if #matches == 1 then
+    local c = matches[1]
+    local suffix = c:sub(#prefix + 1)
+    if suffix == "" then return {} end
+    return { suffix }
+  end
+  return matches
+end
+
+-- Helpers
 local function splitWords(s)
   local t = {}
-  for word in s:gmatch("%S+") do table.insert(t, word) end
+  for w in s:gmatch("%S+") do table.insert(t, w) end
   return t
 end
 
+local function sanitizeName(name)
+  if not name or type(name) ~= "string" then return nil end
+  if name:find("[/\\]") or name:find("%.%.") then return nil end
+  if name:sub(-4) == ".lua" then name = name:sub(1, -5) end
+  if name == "" then return nil end
+  return name
+end
+
+-- Try to run package by name
+local function tryRunPackageByName(name, args)
+  local cands = {
+    PACKAGES_DIR .. "/" .. name .. ".lua",
+    PACKAGES_DIR .. "/" .. name:lower() .. ".lua",
+    PACKAGES_DIR .. "/" .. name:upper() .. ".lua",
+  }
+  for _, path in ipairs(cands) do
+    if fs.exists(path) then
+      local ok, err = pcall(function()
+        if args and #args > 0 then shell.run(path, unpack(args)) else shell.run(path) end
+      end)
+      if not ok then
+        term.setTextColor(colors.lightBlue)
+        print("Error running package:", err)
+      end
+      return true
+    end
+  end
+  return false
+end
+
 local function listPackages()
-  if not fs.exists(PACKAGES_DIR) then
-    print("(no packages directory)")
-    return
-  end
-  local items = fs.list(PACKAGES_DIR)
-  local printed = false
-  for _,name in ipairs(items) do
-    if name:sub(-4) == ".lua" then
-      print(name:sub(1, -5))
-      printed = true
-    end
-  end
-  if not printed then print("(no .lua packages found in " .. PACKAGES_DIR .. ")") end
+  term.setTextColor(colors.lightBlue)
+  local names = listPackageNames()
+  if #names == 0 then print("(no packages found in " .. PACKAGES_DIR .. ")") return end
+  for _,n in ipairs(names) do print(n) end
 end
 
-local function packagePath(name)
-  -- allow either "foo" or "foo.lua"
-  if name:sub(-4) == ".lua" then
-    return PACKAGES_DIR .. "/" .. name
-  else
-    return PACKAGES_DIR .. "/" .. name .. ".lua"
+local function printHelp()
+  term.setTextColor(colors.lightBlue)
+  print("Nova Shell 1.0 - help")
+  print("Commands: help, list, exit, quit, clear")
+  local commands = loadCommands()
+  local cmds = {}
+  for name,fn in pairs(commands) do
+    if type(name) == "string" and type(fn) == "function" then table.insert(cmds, name) end
   end
+  if #cmds > 0 then
+    table.sort(cmds, function(a,b) return a:lower() < b:lower() end)
+    io.write("")
+    for i,name in ipairs(cmds) do
+      io.write(name)
+      if i < #cmds then io.write(", ") end
+    end
+    print()
+  end
+  print(" To run a package, type its name.")
 end
 
-local function runPackage(name, args)
-  local path = packagePath(name)
-  if not fs.exists(path) then
-    print("Package not found: " .. name)
-    return false
-  end
-
-  -- read file
-  local handle, err = fs.open(path, "r")
-  if not handle then
-    print("Error opening package: " .. tostring(err))
-    return false
-  end
-  local src = handle.readAll()
-  handle.close()
-
-  -- prepare env where package gets arg and inherits global _G
-  local env = { arg = args or {} }
-  setmetatable(env, { __index = _G })
-
-  -- try to load the chunk in a way compatible with both Lua 5.1 and 5.2+ used by CC variants
-  local chunk, loadErr
-
-  -- try load with environment (Lua 5.2+)
-  local ok, try = pcall(function() return load(src, "@"..path, "t", env) end)
-  if ok and try then
-    chunk = try
-  else
-    -- fallback: load then setfenv (Lua 5.1 / setfenv available)
-    local loaded, le = load(src, "@"..path)
-    if loaded and setfenv then
-      setfenv(loaded, env)
-      chunk = loaded
-    else
-      loadErr = le or try -- whichever error we got
-    end
-  end
-
-  if not chunk then
-    print("Error loading package '"..name.."': " .. tostring(loadErr))
-    return false
-  end
-
-  -- run in protected mode, show traceback on error
-  local ok, err = xpcall(chunk, debug.traceback)
-  if not ok then
-    print("Error running package '"..name.."':")
-    print(err)
-    return false
-  end
-
-  return true
-end
-
--- builtin commands
-local builtins = {
-  ["help"] = function()
-    print("nova shell - commands:")
-    print("  help             show this help")
-    print("  list             list packages in " .. PACKAGES_DIR)
-    print("  run <pkg> [...]  run a package explicitly")
-    print("  exit / quit      leave nova shell")
-    print("  clear            clear the screen")
-    print("")
-    print("To run a package just type its name (e.g. mypkg arg1 arg2).")
-  end,
-  ["list"] = function() listPackages() end,
-  ["run"] = function(args)
-    if #args < 1 then
-      print("Usage: run <package> [args...]")
-      return
-    end
-    local pkg = table.remove(args, 1)
-    runPackage(pkg, args)
-  end,
-  ["clear"] = function() term.clear(); term.setCursorPos(1,1) end,
-}
-
--- main REPL
+-- REPL
 local function repl()
-  print("Welcome to Nova Shell")
-  print("Packages dir: " .. PACKAGES_DIR)
-  print("Type 'help' for commands.")
+  term.setTextColor(colors.lightBlue)
+  print("Welcome to Nova Shell 1.0 - type 'help' for more info.")
   while true do
-    io.write("> ")
-    local line = read()
-    if not line then -- EOF / ctrl-D
-      print()
-      break
-    end
+    term.setTextColor(colors.purple)
+    term.write("> ")
+    term.setTextColor(colors.purple)
+    local ok, line = pcall(function() return read(nil, nil, completion) end)
+    term.setTextColor(colors.lightBlue)
+
+    if not ok then print() break end
+    if not line then print() break end
+
     line = line:gsub("^%s+", ""):gsub("%s+$", "")
-    if line == "" then goto continue end
+    if line ~= "" then
+      local parts = splitWords(line)
+      local cmd = parts[1]
+      local args = {}
+      for i=2,#parts do args[#args+1] = parts[i] end
 
-    local parts = splitWords(line)
-    local cmd = parts[1]
-    local args = {}
-    for i=2,#parts do args[#args+1] = parts[i] end
-
-    -- builtins
-    if builtins[cmd] then
-      builtins[cmd](args)
-      goto continue
+      if cmd == "help" then
+        printHelp()
+      elseif cmd == "list" then
+        listPackages()
+      elseif cmd == "exit" or cmd == "quit" then
+        print("Bye.")
+        break
+      elseif cmd == "clear" then
+        term.clear()
+        term.setCursorPos(1,1)
+      else
+        local commands = loadCommands()
+        local matched = false
+        local lowerCmd = cmd:lower()
+        for name,fn in pairs(commands) do
+          if type(name) == "string" and type(fn) == "function" and name:lower() == lowerCmd then
+            local ok2, err = pcall(function() fn(args) end)
+            if not ok2 then print("Command error:", err) end
+            matched = true
+            break
+          end
+        end
+        if not matched then
+          local sane = sanitizeName(cmd)
+          if not sane then
+            print("Invalid package name.")
+          else
+            local ran = tryRunPackageByName(sane, args)
+            if not ran then print("Package not found: " .. cmd) end
+          end
+        end
+      end
     end
-
-    -- exit aliases
-    if cmd == "exit" or cmd == "quit" then
-      print("Leaving Nova Shell.")
-      break
-    end
-
-    -- try to run as package
-    local ok = runPackage(cmd, args)
-    if not ok then
-      print("Unknown command or package: " .. cmd)
-    end
-
-    ::continue::
   end
 end
 
--- if executed as a program, start REPL
+-- Start shell
 repl()

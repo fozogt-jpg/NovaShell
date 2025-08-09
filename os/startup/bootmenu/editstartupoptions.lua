@@ -1,1 +1,0 @@
-shell.run("edit nova/sys/boot/menu/startupoptions.txt")

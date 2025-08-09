@@ -2,16 +2,15 @@
 local root = "https://fozogt-jpg.github.io/NovaShell/os"
 local files = {
   { url = root.."/startup/bootmenu/bootscreen.lua", path = "/nova/sys/boot/menu/bootscreen.lua" },
-  { url = root.."/startup/bootmenu/editstartupoptions.lua", path = "/nova/sys/boot/menu/editstartupoptions.lua" },
   { url = root.."/startup/nova.lua", path = "/nova/sys/boot/nova.lua" },
   { url = root.."/startup/bootmenu/reboot1.lua", path = "/nova/sys/boot/menu/reboot1.lua" },
   { url = root.."/startup/bootmenu/shutdown1.lua", path = "/nova/sys/boot/menu/shutdown1.lua" },
   { url = root.."/startup/startup.lua", path = "/startup.lua" },
-  { url = root.."/startup/bootmenu/startupoptions.txt", path = "/nova/sys/boot/menu/startupoptions.txt" },
   { url = root.."/Nova/sys/core.lua", path = "/nova/sys/core.lua" },
   { url = root.."/Nova/sys/pkg-utils/install.lua", path = "/nova/pkg-utils/install.lua" },
   { url = root.."/Nova/sys/pkg-utils/uninstall.lua", path = "/nova/sys/pkg-utils/uninstall.lua" },
   { url = root.."/Nova/default_packages/appstore.lua", path = "/nova/packages/NovaStore.lua" },
+  { url = root.."/Nova/default_packages/appmanger.lua", path = "/nova/packages/nam.lua" },
 }
 
 -- ensure HTTP API is available
