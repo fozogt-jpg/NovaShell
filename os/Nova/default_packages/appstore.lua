@@ -53,9 +53,9 @@ local pkgPath = "/nova/packages/"..chosen..".lua"
 
 -- install or uninstall
 if fs.exists(pkgPath) then
-  shell.run("/nova/uninstall.lua", "uninstall", chosen)
+  shell.run("/nova/sys/pkg-utils/uninstall.lua", "uninstall", chosen)
 else
-  shell.run("/nova/install.lua",   chosen)
+  shell.run("/nova/sys/pkg-utils/install.lua",   chosen)
 end
 
 print("\nDone. Press any key to return.")
