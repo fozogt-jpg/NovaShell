@@ -27,6 +27,6 @@ print("Flag file created: " .. flagFile)
 print("Ready to run the Opus installer.")
 sleep(1)
 fs.move("nova/packages/Startup_Restore.lua", "nova/packages/sr.lua")
-print("Once in Opus open shell and run temp/sn.lua and, once in Nova run sr."
+print("Once in Opus open shell and run temp/sn.lua and, once in Nova run sr.")
 sleep(1.8)
 shell.run("nova/packages/Opus_Installer.lua")
