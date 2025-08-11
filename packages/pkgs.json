@@ -7,5 +7,9 @@
     "url": "https://fozogt-jpg.github.io/NovaShell/packages/pkgs/OpusD/main.lua",
     "description": "Dualboots OpusOS with Nova.",
     "durl": "https://fozogt-jpg.github.io/NovaShell/packages/pkgs/OpusD/d.json"
+  },
+    "Startup_Restore": {
+    "url": "https://fozogt-jpg.github.io/NovaShell/packages/pkgs/StartupR/main.lua",
+    "description": "Restores starup from temp/sn.lua."
   }
 }
