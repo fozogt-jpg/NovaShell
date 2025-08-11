@@ -1,9 +1,10 @@
--- pre_install.lua
 local fs = fs
 local tempDir = "temp"
 local tempFile = fs.combine(tempDir, "sn.lua")
 local flagFile = fs.combine(tempDir, "onb")
 local startupFile = "startup.lua"
+local optionsFile = "nova/sys/boot/options.text"
+local lineToAdd = "Opus\tsys/boot/opus.lua"
 
 -- Ensure temp folder exists
 if not fs.exists(tempDir) then
@@ -20,9 +21,23 @@ end
 
 -- Create the onb flag for next boot
 local f = fs.open(flagFile, "w")
-f.write("1")
-f.close()
-print("Flag file created: " .. flagFile)
+if f then
+    f.write("1")
+    f.close()
+    print("Flag file created: " .. flagFile)
+else
+    print("Failed to create flag file: " .. flagFile)
+end
+
+-- Append Opus entry to options.text
+local f2 = fs.open(optionsFile, "a")
+if f2 then
+    f2.write(lineToAdd .. "\n")
+    f2.close()
+    print("Added line to " .. optionsFile)
+else
+    print("Could not open " .. optionsFile)
+end
 
 print("Ready to run the Opus installer.")
 sleep(1)

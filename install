@@ -11,6 +11,7 @@ local files = {
   { url = root.."/Nova/sys/pkg-utils/uninstall.lua", path = "/nova/sys/pkg-utils/uninstall.lua" },
   { url = root.."/Nova/default_packages/appstore.lua", path = "/nova/packages/NovaStore.lua" },
   { url = root.."/Nova/default_packages/appmanger.lua", path = "/nova/packages/nam.lua" },
+  { url = root.."/Nova/sys/pkg-utils/depend.lua", path = "/nova/sys/pkg-utils/depend.lua" },
 }
 
 -- ensure HTTP API is available

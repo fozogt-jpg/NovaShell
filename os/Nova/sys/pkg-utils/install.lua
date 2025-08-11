@@ -46,6 +46,6 @@ file.close()
 print("Installed " .. name)
 
 -- call dependency resolver
-if fs.exists("/nova/sys/dependency.lua") then
-  shell.run("/nova/sys/dependency.lua", name)
+if fs.exists("/nova/sys/pkg-utils/depend.lua") then
+  shell.run("/nova/sys/pkg-utils/depend.lua", name)
 end
