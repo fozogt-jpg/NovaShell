@@ -70,4 +70,6 @@ end
 
 print()
 print("Installation complete")
-print("Reboot to start Nova OS:  reboot")
+sleep("1.5")
+print("Rebooting")
+shell.run("reboot")

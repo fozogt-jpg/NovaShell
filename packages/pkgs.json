@@ -1,0 +1,11 @@
+{
+  "Opus_Installer": {
+    "url": "https://fozogt-jpg.github.io/NovaShell/packages/pkgs/OpusI/main.lua",
+    "description": "Installs OpusOS"
+  },
+  "Opus_Nova_Dualboot": {
+    "url": "https://fozogt-jpg.github.io/NovaShell/packages/pkgs/OpusD/main.lua",
+    "description": "Dualboots OpusOS with Nova.",
+    "durl": "https://fozogt-jpg.github.io/NovaShell/packages/pkgs/OpusD/d.json"
+  }
+}

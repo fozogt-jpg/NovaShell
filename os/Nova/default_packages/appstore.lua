@@ -1,6 +1,6 @@
 -- /nova/apps/AppStore.lua
 local http, fs, term, textutils, shell = http, fs, term, textutils, shell
-local INDEX = "https://jxoj.github.io/CC/Nova/apps/packages.json"
+local INDEX = "https://fozogt-jpg.github.io/NovaShell/packages/pkgs.json"
 
 if not http then
   print("Error: HTTP API disabled"); return
