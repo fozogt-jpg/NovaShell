@@ -7,7 +7,7 @@ local files = {
   { url = root.."/startup/bootmenu/shutdown1.lua", path = "/nova/sys/boot/menu/shutdown1.lua" },
   { url = root.."/startup/startup.lua", path = "/startup.lua" },
   { url = root.."/Nova/sys/core.lua", path = "/nova/sys/core.lua" },
-  { url = root.."/Nova/sys/pkg-utils/install.lua", path = "/nova/pkg-utils/install.lua" },
+  { url = root.."/Nova/sys/pkg-utils/install.lua", path = "/nova/sys/pkg-utils/install.lua" },
   { url = root.."/Nova/sys/pkg-utils/uninstall.lua", path = "/nova/sys/pkg-utils/uninstall.lua" },
   { url = root.."/Nova/default_packages/appstore.lua", path = "/nova/packages/NovaStore.lua" },
   { url = root.."/Nova/default_packages/appmanger.lua", path = "/nova/packages/nam.lua" },

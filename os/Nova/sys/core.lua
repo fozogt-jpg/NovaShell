@@ -1,5 +1,11 @@
-
+-- core.lua
 local fs, term, shell, textutils = fs, term, shell, textutils
+
+_G.shell = shell
+_G.fs = fs
+_G.term = term
+_G.textutils = textutils
+_G.colors = colors
 
 local PACKAGES_DIR = "/nova/packages"
 local COMMANDS_FILE = "/nova/commands.lua"
@@ -21,6 +27,7 @@ local commands = {}
 commands.about = function(args)
   print("Nova Shell 1.0")
 end
+
 
 return commands
 ]])
@@ -187,24 +194,45 @@ local function repl()
         term.clear()
         term.setCursorPos(1,1)
       else
+        -- 1) Try Nova commands
         local commands = loadCommands()
         local matched = false
         local lowerCmd = cmd:lower()
         for name,fn in pairs(commands) do
           if type(name) == "string" and type(fn) == "function" and name:lower() == lowerCmd then
             local ok2, err = pcall(function() fn(args) end)
-            if not ok2 then print("Command error:", err) end
+            if not ok2 then
+              term.setTextColor(colors.red)
+              print("Command error:", err)
+              term.setTextColor(colors.lightBlue)
+            end
             matched = true
             break
           end
         end
+
+        -- 2) Try Nova package files
         if not matched then
           local sane = sanitizeName(cmd)
-          if not sane then
-            print("Invalid package name.")
-          else
-            local ran = tryRunPackageByName(sane, args)
-            if not ran then print("Package not found: " .. cmd) end
+          if sane and tryRunPackageByName(sane, args) then
+            matched = true
+          end
+        end
+
+        -- 3) Fallback to CraftOS/shell.run for regular commands
+        if not matched then
+          local ok3, err = pcall(function()
+            if args and #args > 0 then
+              shell.run(cmd, unpack(args))
+            else
+              shell.run(cmd)
+            end
+          end)
+          if not ok3 then
+            term.setTextColor(colors.red)
+            print("Unknown command or package: " .. cmd)
+            if err then print("Error: " .. tostring(err)) end
+            term.setTextColor(colors.lightBlue)
           end
         end
       end
