@@ -71,6 +71,6 @@ end
 
 print()
 print("Installation complete")
-sleep("1.5")
+sleep(1.5)
 print("Rebooting")
 shell.run("reboot")
