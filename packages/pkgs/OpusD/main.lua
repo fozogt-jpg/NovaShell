@@ -3,7 +3,7 @@ local tempDir = "temp"
 local tempFile = fs.combine(tempDir, "sn.lua")
 local flagFile = fs.combine(tempDir, "onb")
 local startupFile = "startup.lua"
-local optionsFile = "nova/sys/boot/options.text"
+local optionsFile = "nova/sys/boot/options.txt"
 local lineToAdd = "Opus\tsys/boot/opus.lua"
 
 -- Ensure temp folder exists
