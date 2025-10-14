@@ -21,11 +21,12 @@ local files = {
   { url = root.."/sys/utils/autofill.lua", path = "/nova/.sys/utils/autofill.lua" },
   { url = root.."/sys/utils/loading.lua", path = "/nova/.sys/utils/loading.lua" },
   { url = root.."/sys/v", path = "/nova/.sys/v" },
+  { url = root.."/startup.lua", path = "startup.lua" },
 }
 
 -- Default update exclude list
 local update_exclude = {
-  "/nova/.sys/config/sys.cfg",
+  "",
 }
 
 local args = {...}
