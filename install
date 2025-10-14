@@ -1,5 +1,5 @@
 -- Auto-generated Nova installer
-local root = "https://fozogt-jpg.github.io/NovaShell/os/nova/"
+local root = "https://fozogt-jpg.github.io/NovaShell/os/nova"
 
 local files = {
   { url = root.."/.sys/bios.lua", path = "/nova/.sys/bios.lua" },

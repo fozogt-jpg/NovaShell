@@ -86,7 +86,7 @@ local function mainFlow()
   local remoteURL = "https://fozogt-jpg.github.io/NovaShell/version.txt"; local localVersionPath = "/nova/.sys/v"; local remoteVers = fetchRemoteVersion(remoteURL)
   if remoteVers then
     local localVers = readLocalVersion(localVersionPath) or "0"
-    if compareVersion(localVers, remoteVers) < 0 then status("Info", colors.yellow, "Remote newer. Launching installer..."); sleep(0.5); local ok=pcall(function() shell.run("wget","run","https://fozogt.github.io/NovaShell/install") end); if ok then return end else status("Success", colors.green, "System up-to-date ("..(localVers or "0")..")") end
+    if compareVersion(localVers, remoteVers) < 0 then status("Info", colors.yellow, "Remote newer. Launching installer..."); sleep(0.5); local ok=pcall(function() shell.run("wget","run","https://fozogt-jpg.github.io/NovaShell/install","-u") end); if ok then return end else status("Success", colors.green, "System up-to-date ("..(localVers or "0")..")") end
   else
     status("Error", colors.red, "Could not fetch remote version")
   end
