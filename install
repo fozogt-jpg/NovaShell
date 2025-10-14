@@ -17,7 +17,6 @@ local files = {
   { url = root.."/sys/boot/menu/bootmenu.lua", path = "/nova/.sys/boot/menu/bootmenu.lua" },
   { url = root.."/sys/boot/menu/reboot1.lua", path = "/nova/.sys/boot/menu/reboot1.lua" },
   { url = root.."/sys/boot/menu/shutdown1.lua", path = "/nova/.sys/boot/menu/shutdown1.lua" },
-  { url = root.."/sys/config/sys.cfg", path = "/nova/.sys/config/sys.cfg" },
   { url = root.."/sys/desktop/screensaver.lua", path = "/nova/.sys/desktop/screensaver.lua" },
   { url = root.."/sys/utils/autofill.lua", path = "/nova/.sys/utils/autofill.lua" },
   { url = root.."/sys/utils/loading.lua", path = "/nova/.sys/utils/loading.lua" },
