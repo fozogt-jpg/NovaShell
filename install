@@ -1,6 +1,6 @@
 -- Auto-generated Nova installer
 local root = "https://fozogt-jpg.github.io/NovaShell/os/nova/"
-ECHO is off.
+
 local files = {
   { url = root.."/.sys/bios.lua", path = "/nova/.sys/bios.lua" },
   { url = root.."/.sys/shell.lua", path = "/nova/.sys/shell.lua" },
@@ -22,122 +22,126 @@ local files = {
   { url = root.."/.sys/utils/autofill.lua", path = "/nova/.sys/utils/autofill.lua" },
   { url = root.."/.sys/utils/loading.lua", path = "/nova/.sys/utils/loading.lua" },
 }
-ECHO is off.
- local update_exclude = {
- }
- -- default update exclude list
- local update_exclude = {
-   "/nova/.sys/config/sys.cfg",
- }
 
- local args = {...}
- local mode = args[1] or ""
+-- Default update exclude list
+local update_exclude = {
+  "/nova/.sys/config/sys.cfg",
+}
 
- -- Clean terminal and header
- if term and term.clear then term.clear() end
- if term and term.setCursorPos then term.setCursorPos(1,1) end
- if term and term.setTextColor then term.setTextColor(colors.purple) end
- print("Nova Installer")
- if term and term.setTextColor then term.setTextColor(colors.white) end
+local args = {...}
+local mode = args[1] or ""
 
- -- Disk handling: target will be /disk or /disk2
- local disk_target = nil
- if mode == "-d" then
-   -- prefer /disk, then /disk2; if neither present, prompt to insert
-   local function findAvailableDisks()
-     local avail = {}
-     if fs.exists("/disk") then table.insert(avail, "/disk") end
-     if fs.exists("/disk2") then table.insert(avail, "/disk2") end
-     return avail
-   end
-   local avail = findAvailableDisks()
-   while #avail == 0 do
-     print("No disks mounted at /disk or /disk2. Insert a disk and press Enter to retry, or type 'c' to cancel.")
-     local ans = read()
-     if ans == 'c' then print('Disk install cancelled') return end
-     avail = findAvailableDisks()
-   end
-   if #avail == 1 then
-     disk_target = avail[1]
-   else
-     print('Select target disk:')
-     for i,v in ipairs(avail) do print(i..') '..v) end
-     local sel = tonumber(read()) or 1
-     disk_target = avail[sel] or avail[1]
-   end
-   print('Installing to '..disk_target)
-   if not fs.exists(disk_target..'/nova') then fs.makeDir(disk_target..'/nova') end
- end
+-- Clean terminal and header
+if term and term.clear then term.clear() end
+if term and term.setCursorPos then term.setCursorPos(1,1) end
+if term and term.setTextColor then term.setTextColor(colors.purple) end
+print("Nova Installer")
+if term and term.setTextColor then term.setTextColor(colors.white) end
 
- -- ensure HTTP API is available
- if not http then
-   print('Error: HTTP API disabled')
-   return
- end
+-- Disk handling: target will be /disk or /disk2
+local disk_target = nil
+if mode == "-d" then
+  local function findAvailableDisks()
+    local avail = {}
+    if fs.exists("/disk") then table.insert(avail, "/disk") end
+    if fs.exists("/disk2") then table.insert(avail, "/disk2") end
+    return avail
+  end
 
- local function ensureDir(p)
-   local dir = p:match('(.+)/[/]+$')
-   if dir and not fs.exists(dir) then fs.makeDir(dir) end
- end
+  local avail = findAvailableDisks()
+  while #avail == 0 do
+    print("No disks mounted at /disk or /disk2. Insert a disk and press Enter to retry, or type 'c' to cancel.")
+    local ans = read()
+    if ans == "c" then
+      print("Disk install cancelled")
+      return
+    end
+    avail = findAvailableDisks()
+  end
 
- local function isExcluded(path)
-   for _,v in ipairs(update_exclude) do
-     if v == path then return true end
-   end
-   return false
- end
+  if #avail == 1 then
+    disk_target = avail[1]
+  else
+    print("Select target disk:")
+    for i, v in ipairs(avail) do
+      print(i..") "..v)
+    end
+    local sel = tonumber(read()) or 1
+    disk_target = avail[sel] or avail[1]
+  end
 
- local function download(f)
-   if mode == '-u' and isExcluded(f.path) then
-     print('  Skipping excluded file '..f.path)
-     return true
-   end
+  print("Installing to "..disk_target)
+  if not fs.exists(disk_target.."/nova") then fs.makeDir(disk_target.."/nova") end
+end
 
-   -- determine where to write the file
-   local writePath = f.path
-   if disk_target then
-     -- install onto the selected disk: prefix disk_target
-     if f.path == '/startup.lua' then
-       writePath = disk_target..'/startup.lua'
-     else
-       writePath = disk_target..f.path
-     end
-   end
+-- Ensure HTTP API is available
+if not http then
+  print("Error: HTTP API disabled")
+  return
+end
 
-   if writePath == '/startup.lua' and fs.exists('/startup.lua') then
-     print('  Existing startup.lua found. Renaming to startup_old.lua')
-     if fs.exists('/startup_old.lua') then fs.delete('/startup_old.lua') end
-     fs.move('/startup.lua', '/startup_old.lua')
-   elseif fs.exists(writePath) then
-     fs.delete(writePath)
-   end
+local function ensureDir(p)
+  local dir = p:match("(.+)/[^/]+$")
+  if dir and not fs.exists(dir) then fs.makeDir(dir) end
+end
 
-   ensureDir(writePath)
-   local res = http.get(f.url)
-   if not res then
-     print('  FAILED to fetch '..f.url)
-     return false
-   end
-   local h = fs.open(writePath, 'w')
-   h.write(res.readAll())
-   h.close()
-   res.close()
-   return true
- end
+local function isExcluded(path)
+  for _, v in ipairs(update_exclude) do
+    if v == path then return true end
+  end
+  return false
+end
 
- for _,f in ipairs(files) do
-   if not download(f) then
-     print('Installation aborted.')
-     return
-   end
- end
+local function download(f)
+  if mode == "-u" and isExcluded(f.path) then
+    print("  Skipping excluded file "..f.path)
+    return true
+  end
 
- if not fs.exists('/nova/packages') then fs.makeDir('/nova/packages') end
+  local writePath = f.path
+  if disk_target then
+    if f.path == "/startup.lua" then
+      writePath = disk_target.."/startup.lua"
+    else
+      writePath = disk_target..f.path
+    end
+  end
 
- print()
- print('Installation complete')
- if mode ~= '-u' then
-   sleep(1.5)
-   print('Rebooting...')
-   pcall(shell.run, 'reboot')
- end
+  if writePath == "/startup.lua" and fs.exists("/startup.lua") then
+    print("  Existing startup.lua found. Renaming to startup_old.lua")
+    if fs.exists("/startup_old.lua") then fs.delete("/startup_old.lua") end
+    fs.move("/startup.lua", "/startup_old.lua")
+  elseif fs.exists(writePath) then
+    fs.delete(writePath)
+  end
+
+  ensureDir(writePath)
+  local res = http.get(f.url)
+  if not res then
+    print("  FAILED to fetch "..f.url)
+    return false
+  end
+
+  local h = fs.open(writePath, "w")
+  h.write(res.readAll())
+  h.close()
+  res.close()
+  return true
+end
+
+for _, f in ipairs(files) do
+  if not download(f) then
+    print("Installation aborted.")
+    return
+  end
+end
+
+if not fs.exists("/nova/packages") then fs.makeDir("/nova/packages") end
+
+print()
+print("Installation complete")
+if mode ~= "-u" then
+  sleep(1.5)
+  print("Rebooting...")
+  pcall(shell.run, "reboot")
+end
