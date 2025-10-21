@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>NovaOS — Package Browser</title>
+  <style>
+    :root{
+      --bg-900: #19021a;
+      --bg-800: #2b0440;
+      --purple-700: #5b2a84;
+      --purple-600: #7b4aae;
+      --purple-500: #9b6fe0;
+      --muted: #d9d4eb;
+      --card-bg: rgba(255,255,255,0.03);
+      --glass: rgba(255,255,255,0.02);
+      --radius: 12px;
+      --shadow: 0 10px 30px rgba(8,4,18,0.6);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      min-height:100vh;
+      background: linear-gradient(180deg,var(--bg-800) 0%, var(--bg-900) 70%);
+      color:var(--muted);
+      display:flex;
+      align-items:flex-start;
+      justify-content:center;
+      padding:36px 20px;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+
+    .container{
+      width:100%;
+      max-width:1100px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));
+      border-radius:14px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,0.04);
+    }
+
+    header.topbar{
+      display:flex;
+      align-items:center;
+      gap:16px;
+      padding:18px 22px;
+      border-bottom:1px solid rgba(255,255,255,0.03);
+    }
+
+    .brand{
+      display:flex;
+      gap:12px;
+      align-items:center;
+    }
+    .mark{
+      width:48px;
+      height:48px;
+      border-radius:10px;
+      background: linear-gradient(135deg,var(--purple-700),var(--purple-500));
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:white;
+      font-weight:800;
+      font-family:monospace;
+      font-size:1.05rem;
+      box-shadow: 0 6px 18px rgba(91,42,132,0.12);
+    }
+    .brand h1{ margin:0; font-size:1.05rem; color:white }
+    .brand p{ margin:0; font-size:0.84rem; color:var(--muted) }
+
+    nav.tabs{ margin-left:auto; display:flex; gap:8px; align-items:center }
+    .tab{
+      padding:8px 12px;
+      border-radius:10px;
+      background:transparent;
+      color:var(--muted);
+      border:1px solid transparent;
+      cursor:pointer;
+      font-weight:700;
+    }
+    .tab[aria-selected="true"]{
+      background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      color:white;
+      border:1px solid rgba(255,255,255,0.04);
+      box-shadow: 0 8px 28px rgba(41, 13, 54, 0.26);
+    }
+
+    main.content{
+      padding:22px;
+      display:grid;
+      gap:20px;
+    }
+
+    .hero{
+      display:flex;
+      gap:18px;
+      align-items:flex-start;
+      flex-wrap:wrap;
+    }
+    .hero .left{ flex:1; min-width:260px }
+    .hero h2{ margin:0 0 8px 0; color:white; font-size:1.5rem }
+    .hero p{ margin:0 0 12px 0; color:var(--muted); line-height:1.45 }
+
+    .card{
+      padding:14px;
+      border-radius:12px;
+      background:var(--card-bg);
+      border:1px solid rgba(255,255,255,0.03);
+    }
+
+    .install-row{ display:flex; gap:10px; align-items:center; margin-top:8px; flex-wrap:wrap }
+    .cmd{
+      background:rgba(0,0,0,0.32);
+      padding:10px 12px;
+      border-radius:8px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
+      color:white;
+      min-width:0;
+      overflow-wrap:anywhere;
+      flex:1;
+    }
+    .btn{
+      background:var(--purple-600);
+      color:white;
+      padding:9px 12px;
+      border-radius:8px;
+      border:none;
+      cursor:pointer;
+      font-weight:800;
+    }
+    .btn.small{ padding:7px 10px; font-weight:700; min-width:88px }
+
+    .muted { color:var(--muted); font-size:0.95rem }
+
+    /* packages */
+    .packages-header{ display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap }
+    .pkg-grid{
+      display:grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap:14px;
+      margin-top:12px;
+    }
+
+    .pkg-card{
+      background: linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.01));
+      border-radius:12px;
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,0.03);
+      display:flex;
+      flex-direction:column;
+      min-height:240px;
+      transition: transform 120ms ease;
+    }
+    .pkg-card:focus-within, .pkg-card:hover{ transform: translateY(-6px) }
+
+    .pkg-image{
+      height:130px;
+      background:var(--glass);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border-bottom:1px solid rgba(255,255,255,0.02);
+      cursor:pointer;
+    }
+    .pkg-image img{ max-width:100%; max-height:100%; object-fit:contain; display:block; }
+
+    .pkg-body{
+      padding:12px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      flex:1;
+    }
+    .pkg-title{ display:flex; align-items:center; justify-content:space-between; gap:8px }
+    .pkg-title h3{ margin:0; font-size:1rem; color:white; word-break:break-word }
+    .pkg-desc{ margin:0; color:var(--muted); font-size:0.93rem; line-height:1.25; flex:1; overflow:hidden }
+
+    .pkg-actions{ display:flex; gap:8px; margin-top:8px; align-items:center; flex-wrap:wrap }
+    .pkg-actions .outline{
+      background:transparent;
+      color:var(--muted);
+      border:1px solid rgba(255,255,255,0.04);
+      padding:8px 10px;
+      border-radius:8px;
+      cursor:pointer;
+      font-weight:700;
+    }
+
+    .loading{ display:flex; gap:12px; align-items:center; color:var(--muted) }
+    .spinner{
+      width:16px; height:16px; border-radius:50%;
+      border:2px solid rgba(255,255,255,0.06);
+      border-top-color:var(--purple-500);
+      animation:spin 900ms linear infinite;
+    }
+    @keyframes spin{ to { transform:rotate(360deg) } }
+
+    footer{ padding:12px 22px; border-top:1px solid rgba(255,255,255,0.03); display:flex; justify-content:space-between; color:var(--muted) }
+
+    /* Modal */
+    .modal-backdrop{
+      position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+      background:rgba(0,0,0,0.6); z-index:9999; padding:20px;
+    }
+    .modal{
+      width:100%; max-width:900px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius:12px; padding:18px; box-shadow:0 18px 60px rgba(0,0,0,0.6);
+      border:1px solid rgba(255,255,255,0.04);
+      color:var(--muted);
+      display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap;
+    }
+    .modal img{ max-width:320px; width:100%; border-radius:8px; object-fit:contain; border:1px solid rgba(255,255,255,0.02) }
+    .modal h3{ margin:0 0 8px 0; color:white }
+    .modal p{ margin:0 0 10px 0; line-height:1.4 }
+    .modal .install-cmd{ background:rgba(0,0,0,0.32); padding:8px 10px; border-radius:8px; font-family:ui-monospace,monospace; color:white; word-break:break-word }
+
+    .toast{
+      position:fixed; right:20px; bottom:20px; display:none; align-items:center; gap:10px;
+      background:linear-gradient(90deg,var(--purple-700),var(--purple-500)); color:white; padding:10px 14px; border-radius:999px;
+      box-shadow:0 10px 30px rgba(45,12,70,0.4); z-index:10001;
+    }
+
+    @media (max-width:720px){
+      .hero{ flex-direction:column }
+      .modal{ flex-direction:column; align-items:center }
+      .modal img{ max-width:80% }
+    }
+  </style>
+</head>
+<body>
+  <div class="container" role="application" aria-label="NovaOS package browser">
+    <header class="topbar">
+      <div class="brand" aria-hidden="false">
+        <div class="mark">N</div>
+        <div>
+          <h1>NovaOS</h1>
+          <p>Authoritative NovaOS package repository (not a community repo)</p>
+        </div>
+      </div>
+
+      <nav class="tabs" role="tablist" aria-label="Main navigation">
+        <button class="tab" data-tab="home" aria-selected="true" id="tab-home">Home</button>
+        <button class="tab" data-tab="packages" aria-selected="false" id="tab-packages">Packages</button>
+        <button class="tab" data-tab="about" aria-selected="false" id="tab-about">About</button>
+      </nav>
+    </header>
+
+    <main class="content" id="main">
+      <!-- HOME -->
+      <section id="home" class="panel" role="tabpanel" aria-labelledby="tab-home">
+        <div class="hero">
+          <div class="left card">
+            <h2>NovaOS — a full replacement for CraftOS</h2>
+            <p>
+              NovaOS is an OS replacement that provides a package manager and curated packages.
+              Install the official Nova installer with the command below.
+            </p>
+
+            <div class="install-row" style="margin-top:6px;">
+              <div class="cmd" id="installCmd" title="Click copy">wget https://fozogt-jpg.github.io/NovaShell/install</div>
+              <button class="btn small" id="copyInstallBtn">Copy</button>
+              <button class="btn small" id="openInstallBtn">Open</button>
+            </div>
+
+            <div style="margin-top:12px;" class="muted">
+              Suggested usage: <span class="install-cmd" style="display:inline-block;margin-left:8px;">sh install</span>
+            </div>
+          </div>
+
+          <aside style="width:320px; min-width:220px" class="card">
+            <h3 style="margin:0 0 8px 0; color:white">Quick start</h3>
+            <p class="muted" style="margin:0 0 10px 0">
+              1) Copy the installer command.<br>
+              2) Run it on a machine with wget.<br>
+              3) Install packages with <code class="install-cmd">nam -i &lt;package&gt;</code>.
+            </p>
+
+            <div style="display:flex; gap:8px; margin-top:8px;">
+              <button class="btn" id="copyNamExample">Copy nam -i &lt;pkg&gt;</button>
+              <button class="btn small" id="gotoPackages">Browse packages</button>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- PACKAGES -->
+      <section id="packages" class="panel" role="tabpanel" aria-labelledby="tab-packages" hidden>
+        <div class="card">
+          <div class="packages-header">
+            <div>
+              <h2 style="margin:0 0 6px 0; color:white">Packages</h2>
+              <div class="muted">Packages are listed from the authoritative repo below.</div>
+            </div>
+
+            <div style="display:flex; gap:8px; align-items:center;">
+              <div class="muted" style="font-size:0.9rem">Source:</div>
+              <div class="install-cmd" style="padding:6px 8px; font-size:0.86rem;">https://fozogt-jpg.github.io/NovaShell/packages/npkg.json</div>
+              <button class="btn small" id="refreshBtn">Refresh</button>
+            </div>
+          </div>
+
+          <div id="pkgArea" style="margin-top:12px;">
+            <div id="pkgLoader" class="loading"><div class="spinner" aria-hidden="true"></div>Loading packages...</div>
+            <div id="pkgError" style="display:none; margin-top:10px; padding:10px; border-radius:8px; background:rgba(255,255,255,0.02); color:#ffb4d3;"></div>
+
+            <div id="pkgGrid" class="pkg-grid" aria-live="polite" style="margin-top:12px; display:none;"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ABOUT -->
+      <section id="about" class="panel" role="tabpanel" aria-labelledby="tab-about" hidden>
+        <div class="card">
+          <h2 style="margin:0 0 10px 0; color:white">About</h2>
+          <p class="muted">
+            This web UI browses packages from the official NovaOS package JSON file and provides a copyable
+            install command for each package. Click a package image to open a detailed view with the install command.
+          </p>
+
+          <h3 style="margin-top:14px; color:white">Expected package JSON format</h3>
+          <pre style="background:rgba(0,0,0,0.32); padding:10px; border-radius:8px; color:var(--muted); overflow:auto;">
+[
+  {
+    "name": "example-pkg",
+    "description": "Short description of package",
+    "image": "https://.../icon.png",
+    "preview": "https://.../preview.png",
+    "install_cmd": "nam -i example-pkg"
+  }
+]
+          </pre>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div>NovaOS — package browser</div>
+      <div class="muted">Purple theme</div>
+    </footer>
+  </div>
+
+  <!-- Modal -->
+  <div id="modalBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal" role="document" aria-label="Package details">
+      <button id="modalClose" style="background:transparent;border:none;color:var(--muted);font-weight:800;cursor:pointer;align-self:flex-start">Close</button>
+      <img id="modalImage" src="" alt="" />
+      <div style="flex:1; min-width:200px;">
+        <h3 id="modalName">Package name</h3>
+        <p id="modalDesc" class="muted">Description goes here</p>
+        <div style="margin-top:12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button id="modalCopy" class="btn">Copy install</button>
+          <a id="modalPreviewLink" class="outline" target="_blank" rel="noopener">Open preview</a>
+          <div style="flex:1"></div>
+        </div>
+
+        <div style="margin-top:12px;">
+          <div style="font-size:0.9rem; color:var(--muted); margin-bottom:6px">Install command</div>
+          <div id="modalCmd" class="install-cmd"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast" role="status" aria-live="polite">Copied to clipboard</div>
+
+  <script>
+    (function(){
+      // CONFIG
+      const PACKAGES_URL = 'https://fozogt-jpg.github.io/NovaShell/packages/npkg.json';
+
+      // Tab behavior
+      const tabs = document.querySelectorAll('.tab');
+      function switchTab(tabKey){
+        tabs.forEach(t=>{
+          const is = t.dataset.tab === tabKey;
+          t.setAttribute('aria-selected', is ? 'true' : 'false');
+          const panel = document.getElementById(t.dataset.tab);
+          if(panel) panel.hidden = !is;
+        });
+      }
+      tabs.forEach(t=>{
+        t.addEventListener('click', ()=> switchTab(t.dataset.tab));
+        t.addEventListener('keydown', (e)=> {
+          if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); switchTab(t.dataset.tab); }
+        });
+      });
+      // default
+      switchTab('home');
+
+      // Quick actions
+      document.getElementById('copyInstallBtn').addEventListener('click', ()=> copyText(document.getElementById('installCmd').textContent.trim()));
+      document.getElementById('openInstallBtn').addEventListener('click', ()=> window.open(document.getElementById('installCmd').textContent.trim(), '_blank', 'noopener'));
+      document.getElementById('copyNamExample').addEventListener('click', ()=> copyText('nam -i <pkg>'));
+      document.getElementById('gotoPackages').addEventListener('click', ()=> { switchTab('packages'); document.getElementById('tab-packages').focus(); loadPackages(); });
+
+      // Toast
+      const toastEl = document.getElementById('toast');
+      let toastT;
+      function showToast(msg='Copied to clipboard'){
+        toastEl.textContent = msg;
+        toastEl.style.display = 'flex';
+        clearTimeout(toastT);
+        toastT = setTimeout(()=> toastEl.style.display = 'none', 2200);
+      }
+
+      // Copy helper
+      async function copyText(text){
+        if(!text) return;
+        try{
+          await navigator.clipboard.writeText(text);
+          showToast('Copied to clipboard');
+        }catch(e){
+          // fallback
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          document.body.appendChild(ta);
+          ta.select();
+          try { document.execCommand('copy'); showToast('Copied to clipboard'); } catch(err){ alert('Copy failed: ' + err); }
+          ta.remove();
+        }
+      }
+
+      // Packages loading
+      const pkgGrid = document.getElementById('pkgGrid');
+      const pkgLoader = document.getElementById('pkgLoader');
+      const pkgError = document.getElementById('pkgError');
+      const refreshBtn = document.getElementById('refreshBtn');
+
+      let packagesData = [];
+
+      async function loadPackages(){
+        pkgGrid.innerHTML = '';
+        packagesData = [];
+        pkgLoader.style.display = 'flex';
+        pkgGrid.style.display = 'none';
+        pkgError.style.display = 'none';
+
+        try{
+          const res = await fetch(PACKAGES_URL, { mode: 'cors', cache: 'no-store' });
+          if(!res.ok) throw new Error('Network response ' + res.status);
+          const json = await res.json();
+
+          if(!Array.isArray(json)) throw new Error('Package file must be a JSON array.');
+          packagesData = json;
+
+          if(packagesData.length === 0){
+            pkgLoader.style.display = 'none';
+            pkgError.style.display = 'block';
+            pkgError.textContent = 'No packages available.';
+            return;
+          }
+
+          packagesData.forEach((pkg, idx) => {
+            const name = pkg.name || pkg.id || 'unknown';
+            const description = pkg.description || pkg.desc || 'No description provided.';
+            const image = pkg.image || pkg.icon || '';
+            const preview = pkg.preview || pkg.screenshot || '';
+            const install_cmd = pkg.install_cmd || `nam -i ${name}`;
+
+            const card = document.createElement('article');
+            card.className = 'pkg-card';
+            card.setAttribute('tabindex', '0');
+            card.innerHTML = `
+              <div class="pkg-image" role="button" tabindex="0" data-idx="${idx}" title="Open details for ${escapeHtml(name)}">
+                ${ image ? `<img loading="lazy" src="${escapeHtmlAttribute(image)}" alt="${escapeHtml(name)} image" />` : `<div style="padding:12px;color:var(--muted)">No image</div>` }
+              </div>
+              <div class="pkg-body">
+                <div class="pkg-title">
+                  <h3>${escapeHtml(name)}</h3>
+                  <div style="color:var(--muted); font-size:0.86rem">${escapeHtml(name)}</div>
+                </div>
+                <p class="pkg-desc">${escapeHtml(description)}</p>
+
+                <div class="pkg-actions">
+                  <button class="btn small copy-install" data-cmd="${escapeHtmlAttribute(install_cmd)}">Copy install</button>
+                  ${ preview ? `<button class="outline preview-open" data-preview="${escapeHtmlAttribute(preview)}">Open preview</button>` : '' }
+                  <button class="outline copy-name" data-name="${escapeHtmlAttribute(name)}">Copy name</button>
+                </div>
+              </div>
+            `;
+            pkgGrid.appendChild(card);
+          });
+
+          // Wire up interactions
+          // Image click opens modal
+          pkgGrid.querySelectorAll('.pkg-image').forEach(el=>{
+            el.addEventListener('click', (e)=> {
+              const idx = Number(el.dataset.idx);
+              openModalFor(idx);
+            });
+            el.addEventListener('keydown', (e)=> {
+              if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); const idx = Number(el.dataset.idx); openModalFor(idx); }
+            });
+          });
+
+          pkgGrid.querySelectorAll('.copy-install').forEach(btn=>{
+            btn.addEventListener('click', ()=> copyText(btn.dataset.cmd));
+          });
+
+          pkgGrid.querySelectorAll('.preview-open').forEach(btn=>{
+            btn.addEventListener('click', ()=> window.open(btn.dataset.preview, '_blank', 'noopener'));
+          });
+
+          pkgGrid.querySelectorAll('.copy-name').forEach(btn=>{
+            btn.addEventListener('click', ()=> copyText(btn.dataset.name));
+          });
+
+          pkgLoader.style.display = 'none';
+          pkgGrid.style.display = 'grid';
+        }catch(err){
+          console.error('Failed loading packages', err);
+          pkgLoader.style.display = 'none';
+          pkgGrid.style.display = 'none';
+          pkgError.style.display = 'block';
+          pkgError.textContent = 'Could not load packages: ' + (err && err.message ? err.message : 'unknown error') + '. If you see CORS errors, the host must enable CORS.';
+        }
+      }
+
+      refreshBtn.addEventListener('click', loadPackages);
+      document.getElementById('tab-packages').addEventListener('click', loadPackages);
+
+      // Modal logic
+      const backdrop = document.getElementById('modalBackdrop');
+      const modalImage = document.getElementById('modalImage');
+      const modalName = document.getElementById('modalName');
+      const modalDesc = document.getElementById('modalDesc');
+      const modalCmd = document.getElementById('modalCmd');
+      const modalCopy = document.getElementById('modalCopy');
+      const modalPreviewLink = document.getElementById('modalPreviewLink');
+      const modalClose = document.getElementById('modalClose');
+
+      function openModalFor(idx){
+        const pkg = packagesData[idx];
+        if(!pkg) return;
+        const name = pkg.name || pkg.id || 'unknown';
+        const description = pkg.description || pkg.desc || 'No description provided.';
+        const image = pkg.preview || pkg.image || pkg.icon || '';
+        const preview = pkg.preview || pkg.image || '';
+        const install_cmd = pkg.install_cmd || `nam -i ${name}`;
+
+        modalImage.src = image || '';
+        modalImage.alt = name + ' image';
+        modalName.textContent = name;
+        modalDesc.textContent = description;
+        modalCmd.textContent = install_cmd;
+        modalPreviewLink.href = preview || '#';
+        modalPreviewLink.style.display = preview ? 'inline-block' : 'none';
+
+        modalCopy.onclick = () => copyText(install_cmd);
+
+        backdrop.style.display = 'flex';
+        backdrop.setAttribute('aria-hidden', 'false');
+
+        // focus for accessibility
+        modalClose.focus();
+      }
+
+      function closeModal(){
+        backdrop.style.display = 'none';
+        backdrop.setAttribute('aria-hidden', 'true');
+        modalImage.src = '';
+      }
+
+      modalClose.addEventListener('click', closeModal);
+      backdrop.addEventListener('click', (e)=> {
+        if(e.target === backdrop) closeModal();
+      });
+
+      // Close on ESC
+      document.addEventListener('keydown', (e)=> {
+        if(e.key === 'Escape') {
+          if(backdrop.style.display === 'flex') closeModal();
+        }
+        // left/right to switch top tabs
+        const order = ['home','packages','about'];
+        let currentIndex = order.findIndex(k => !document.getElementById(k).hidden);
+        if(e.key === 'ArrowRight'){ currentIndex = (currentIndex + 1) % order.length; switchTab(order[currentIndex]); }
+        if(e.key === 'ArrowLeft'){ currentIndex = (currentIndex - 1 + order.length) % order.length; switchTab(order[currentIndex]); }
+      });
+
+      // Prefetch packages quietly (best-effort)
+      (async function prefetch(){
+        try{ await fetch(PACKAGES_URL, { mode:'cors', cache:'no-store' }); }catch(e){}
+      })();
+
+      // Utilities: escaping
+      function escapeHtml(s){
+        if(s === null || s === undefined) return '';
+        return String(s).replace(/[&<>"']/g, (c)=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'": '&#39;'})[c]);
+      }
+      function escapeHtmlAttribute(s){
+        return escapeHtml(s).replace(/"/g,'&quot;');
+      }
+
+      // load packages when page loads? no — load when user opens Packages tab or prefetch done.
+      // But fetch once on startup to warm cache (non-blocking).
+      (async ()=>{ try{ const r = await fetch(PACKAGES_URL, { mode:'cors' }); if(r.ok) { /* don't parse here to avoid double work */ } }catch(e){} })();
+
+    })();
+  </script>
+</body>
+</html>
