@@ -12,8 +12,9 @@
     "url": "https://fozogt-jpg.github.io/NovaShell/packages/pkgs/StartupR/main.lua",
     "description": "Restores starup from temp/sn.lua."
   },
-    "MineExporer": {
+    "MineExplorer": {
     "url": "https://fozogt-jpg.github.io/NovaShell/packages/pkgs/MineXP/main.lua",
-    "description": "A treeview filesystem. File paths changed."
+    "description": "A treeview filesystem. File paths changed.",
+    "gui": "true"
   }
 }
